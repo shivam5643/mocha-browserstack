@@ -20,8 +20,11 @@ jobs:
       fail-fast: false
       max-parallel: 3
       matrix:
-        node: ['14', '16', '18', '20']
-        os: [ macos-latest, windows-latest, ubuntu-latest ]
+        node: ['14', '16', '18', '20', "24"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        exclude:
+          - node: '14'
+            os: 'macos-latest'
     name: Mocha-js Repo ${{ matrix.node }} - ${{ matrix.os }} Sample
     env:
       BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
@@ -29,7 +32,7 @@ jobs:
       PACKAGE_URL: ${{ github.event.inputs.package_url }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit_sha }}
       - uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975
@@ -68,8 +71,13 @@ jobs:
           npm publish staging_package.tgz --registry http://localhost:4873/
         shell: bash
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (Node 14 with legacy peer deps)
+        if: matrix.node == '14'
+        run: npm ci --legacy-peer-deps
+
+      - name: Install dependencies (Node 16+)
+        if: matrix.node != '14'
+        run: npm ci
 
       - name: Run sample tests
         run: npm run sample-test
